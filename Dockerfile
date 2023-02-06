@@ -13,6 +13,8 @@ RUN php composer-setup.php --install-dir=/bin --filename=composer
 
 RUN mkdir -p /app
 RUN git clone https://github.com/mooseh/enphase-prometheus.git /app
+RUN cp .env.example .env
+
 
 WORKDIR /app/src
 RUN composer install

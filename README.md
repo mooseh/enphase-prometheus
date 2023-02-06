@@ -25,6 +25,7 @@ docker run\
 version: "3.6"
 services:
   enphase_prometheus:
+    image: mooseyman1988/enphase-prometheus
     container_name: enphase_exporter
     ports:
       - 8000:8000
