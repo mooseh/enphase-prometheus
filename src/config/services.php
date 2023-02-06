@@ -34,8 +34,7 @@ return [
     "enphase" => [
         "host" => env('ENPHASE_HOST'),
         "ssl" => env("ENPHASE_SSL", true),
-        "session" => env('ENPHASE_SESSION'),
-        "serial" => env('ENPHASE_SERIAL'),
+        "token" => env('ENPHASE_TOKEN'),
     ]
 
 ];

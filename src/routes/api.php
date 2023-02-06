@@ -15,3 +15,6 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/metrics', 'EnphaseController@metrics');
+
+Route::get('/envoy/{any}', 'EnphaseController@asset')->where('any', '.*');;
+Route::get('/envoy', 'EnphaseController@envoy');
