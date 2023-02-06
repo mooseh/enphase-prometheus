@@ -33,12 +33,14 @@ function generateRandomString($length = 10) {
 
 function prometheus($array)
 {
-    $final = [];
     $dotted = \Arr::dot($array);
-    foreach($dotted as $key => $dot){
-        $newKey = str_replace(".", "_", $key);
-        $final[$newKey] = $dot;
-    }
-
-    return $final;
+    $dataString = collect($dotted)->map(function($value, $key){
+        if(intval($value)){
+            $key = str_replace(".", "_", $key);
+            $value = intval($value);
+            return "{$key} {$value}";
+        }
+        return null;
+    })->filter()->implode("\n");
+    return "{$dataString}\n";
 }

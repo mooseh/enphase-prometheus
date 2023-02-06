@@ -17,7 +17,11 @@ class EnphaseController extends Controller
         $metrics = [];
         $metrics['production'] = Enphase::production();
         $metrics['inverters'] = collect(Enphase::inverters())->keyBy('serialNumber')->toArray();
-        return prometheus($metrics);
+    if (request()->has('format') && request()->input('format') == "json") {
+        return $metrics;
+    }
+
+    return response(prometheus($metrics))->header('Content-type', 'text/plain');
     }
 
     /**
