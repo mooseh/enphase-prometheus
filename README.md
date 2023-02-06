@@ -11,17 +11,17 @@ this will be cached for 1 hour and will re-attempt on authentication failure.
 the container can be run like so, although I would suggest you store you token in a token file and
 run the environment with -e "ENPHASE_TOKEN=$(cat .tokenFile)" or with an environment file
 
-`
+```
 docker run\
  -p 8000:8000\
  -e ENPHASE_HOST={ip_address_of_envoy}\
  -e ENPHASE_TOKEN={enlighten_token}\
  -it mooseyman1988/enphase-prometheus
-`
+```
 
 ## running in docker compose
 
-`
+```
 version: "3.6"
 services:
   enphase_prometheus:
@@ -35,6 +35,6 @@ services:
     env_file:
       - .enphase.env
     restart: unless-stopped
-`
+```
 
 
