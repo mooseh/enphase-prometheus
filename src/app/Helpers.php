@@ -37,6 +37,7 @@ function prometheus($array)
     $dataString = collect($dotted)->map(function($value, $key){
         if(intval($value)){
             $key = str_replace(".", "_", $key);
+            $key = str_replace("-", "_", $key);
             $value = intval($value);
             return "{$key} {$value}";
         }
