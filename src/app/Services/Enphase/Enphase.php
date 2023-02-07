@@ -52,10 +52,10 @@ class Enphase {
             ->get($url, $params);
 
         if($response->status() === 401){
-            $this->getSession(true);
             $cookies = [
-                "sessionId" => $this->sessionId
+                "sessionId" => $this->getSession(true)
             ];
+
             $response = Http::timeout($timeout)
                 ->withHeaders($headers)
                 ->withCookies($cookies, $this->host)
@@ -91,6 +91,8 @@ class Enphase {
         if($response->ok()){
             return $response->cookies()->getCookieByName('sessionId')->getValue();
         }
+
+        Cache::forget("enphase_session_{$this->host}");
 
     }
 
@@ -129,7 +131,17 @@ class Enphase {
 
     public function production()
     {
-        return $this->get('/production.json', ["details" => 1], timeout: 20)->json();
+        $res =  $this->get('/production.json', ["details" => 1], timeout: 20)->json();
+        $res['production'] = collect($res['production'])->mapWithKeys(function($type, $key){
+            return ["{$type['type']}_{$key}" => $type];
+        })->toArray();
+        $res['consumption'] = collect($res['consumption'])->mapWithKeys(function($type, $key){
+            if(isset($type['measurementType'])){
+                return ["{$type['measurementType']}" => $type];
+            }
+            return ["{$type['type']}_{$key}" => $type];
+        })->toArray();
+        return $res;
     }
 
     /**
