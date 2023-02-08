@@ -43,7 +43,7 @@ class Enphase {
         $url = "{$this->getProtocol()}://{$this->host}/{$path}";
 
         $cookies = array_merge([
-            "sessionId" => $this->getSession(true)
+            "sessionId" => $this->getSession(false)
         ], $cookies);
 
         $response = Http::timeout($timeout)
@@ -93,7 +93,7 @@ class Enphase {
         ];
 
         //cache the session for 1 hour
-        return Cache::remember("entrez_session", 60 * 60, function() use ($formData, $headers){
+        return Cache::remember("entrez_session", now()->addHours(6), function() use ($formData, $headers){
 
             Log::info("fetching new session from https://entrez.enphaseenergy.com/login");
             $response = Http::withHeaders($headers)->asForm()->post('https://entrez.enphaseenergy.com/login', $formData);

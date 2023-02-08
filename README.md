@@ -9,7 +9,10 @@ this docker application will do the following
 - use that token to authenticate with your envoy, then
 - extract the data from the envoy and present it in a /metrics path
 
-all of the actions above are cached for about 6 hours, so it wont spam enlighten with logins and token creations
+all of the actions above are cached for about 6 hours, so it wont spam enlighten with logins and token creations.
+
+lastly and most importantly once a session is established with your envoy this will retreive data STRAIGHT FROM YOUR ENVOY,
+this means no ridiculous api fees form enlighten!
 
 ## running the container
 
