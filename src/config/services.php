@@ -34,7 +34,9 @@ return [
     "enphase" => [
         "host" => env('ENPHASE_HOST'),
         "ssl" => env("ENPHASE_SSL", true),
-        "token" => env('ENPHASE_TOKEN'),
+        "email" => env('ENPHASE_EMAIL'),
+        "password" => env('ENPHASE_PASSWORD'),
+        "site" => env('ENPHASE_SITE'),
     ]
 
 ];

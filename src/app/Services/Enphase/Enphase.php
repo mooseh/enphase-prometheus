@@ -15,14 +15,14 @@ class Enphase {
     protected $serial;
     protected $config;
     protected $host;
-    protected $sessionId;
     protected $backbone;
 
     public function __construct($config)
     {
         $this->config = $config;
         $this->host = $config['host'];
-        $this->token = $config['token'];
+        $this->backbone = $this->getBackbone();
+        $this->token = $this->getToken();
     }
 
     protected function getProtocol(){
@@ -39,12 +39,12 @@ class Enphase {
 
      protected function get($path, $params = [], $cookies = [], $headers = [], $timeout=15){
         $path = ltrim($path, "/");
+        $url = "{$this->getProtocol()}://{$this->host}/{$path}";
 
         $cookies = [
-            "sessionId" => $this->getSession()
+            "sessionId" => $this->getSession(true)
         ];
 
-        $url = "{$this->getProtocol()}://{$this->host}/{$path}";
         $response = Http::timeout($timeout)
             ->withHeaders($headers)
             ->withCookies($cookies, $this->host)
@@ -71,8 +71,81 @@ class Enphase {
         return $response;
     }
 
+    function getEntrezSession(){
+
+        $formData = [
+            "username" => $this->config['email'],
+            "password" => $this->config['password'],
+            "authFlow" => "entrezSession",
+            "codeChallenge" => null,
+            "redirectUri" => null,
+            "client" => null,
+            "clientId" => null,
+            "serialNum" => null,
+            "grantType" => null,
+            "state" => null,
+        ];
+
+        $headers = [
+            "accept" => "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+            "referer" => "https://entrez.enphaseenergy.com/login_main_page",
+        ];
+
+        //cache the session for 1 hour
+        return Cache::remember("entrez_session", 60 * 60, function() use ($formData, $headers){
+
+            $response = Http::withHeaders($headers)->asForm()->post('https://entrez.enphaseenergy.com/login', $formData);
+
+            if($response->ok()){
+                return $response->cookies()->getCookieByName('SESSION')->getValue();
+            }
+
+            throw new \Exception("Login into https://entrez.enphaseenergy.com/login failed with your username and password provided");
+
+        });
+    }
+
+    public function getToken($refresh = false){
+
+        if($refresh){
+            Cache::forget('entrez_token');
+        }
+
+        if (Cache::has('entrez_token')){
+            return Cache::get('entrez_token');
+        }
+
+        $session = $this->getEntrezSession();
+        $formData = [
+            "uncommissioned" => "on",
+            "Site" => $this->config['site'],
+            "serialNum" => $this->backbone['serial'],
+        ];
+
+        $cookies = [
+            "SESSION" => $session,
+        ];
+
+        $response = Http::asForm()->withCookies($cookies, "entrez.enphaseenergy.com")->post("https://entrez.enphaseenergy.com/entrez_tokens", $formData);
+
+        if($response->ok()){
+            if(strpos($response->body(), '<textarea name="accessToken" id="JWTToken" cols="30" rows="10" >') === false){
+                throw new Exception("no token was found in entrez response, likely incorrect login details provided!");
+            }
+
+            $token = get_string_between($response->body(), '<textarea name="accessToken" id="JWTToken" cols="30" rows="10" >', '</textarea>');
+            Cache::put("entrez_token", $token, now()->addHours(6));
+            return $token;
+        }
+
+        throw new \Exception("url https://entrez.enphaseenergy.com/entrez_tokens responded with {$response->status()}");
+
+    }
+
     public function getSession($refresh=false)
     {
+
+        $token = $this->getToken($refresh);
 
         if($refresh){
             Cache::forget("enphase_session_{$this->host}");
@@ -131,7 +204,7 @@ class Enphase {
 
     public function production()
     {
-        $res =  $this->get('/production.json', ["details" => 1], timeout: 20)->json();
+        $res =  $this->get('/production.json', ["details" => 1], timeout: 20, cookies: ['SESSION' => $this->token])->json();
         $res['production'] = collect($res['production'])->mapWithKeys(function($type, $key){
             return ["{$type['type']}_{$key}" => $type];
         })->toArray();
