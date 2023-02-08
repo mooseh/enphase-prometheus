@@ -2,6 +2,7 @@
 
 namespace App\Services\Enphase;
 
+use Log;
 use Http;
 use Cache;
 
@@ -41,9 +42,9 @@ class Enphase {
         $path = ltrim($path, "/");
         $url = "{$this->getProtocol()}://{$this->host}/{$path}";
 
-        $cookies = [
+        $cookies = array_merge([
             "sessionId" => $this->getSession(true)
-        ];
+        ], $cookies);
 
         $response = Http::timeout($timeout)
             ->withHeaders($headers)
@@ -94,6 +95,7 @@ class Enphase {
         //cache the session for 1 hour
         return Cache::remember("entrez_session", 60 * 60, function() use ($formData, $headers){
 
+            Log::info("fetching new session from https://entrez.enphaseenergy.com/login");
             $response = Http::withHeaders($headers)->asForm()->post('https://entrez.enphaseenergy.com/login', $formData);
 
             if($response->ok()){
@@ -126,6 +128,7 @@ class Enphase {
             "SESSION" => $session,
         ];
 
+        Log::info("fetching new token from https://entrez.enphaseenergy.com/entrez_tokens");
         $response = Http::asForm()->withCookies($cookies, "entrez.enphaseenergy.com")->post("https://entrez.enphaseenergy.com/entrez_tokens", $formData);
 
         if($response->ok()){
@@ -170,8 +173,14 @@ class Enphase {
     }
 
     public function getBackbone(){
-        $home = Cache::remember("envoy_home_{$this->host}", 10 * 60, function(){
-            return $this->get('/home#auth')->body();
+        Cache::forget("envoy_home_{$this->host}");
+
+        $home = Cache::remember("envoy_home_{$this->host}", now()->addMinutes(10), function(){
+            $response = Http::withOptions(['verify' => false])->get("{$this->getProtocol()}://{$this->host}/home#auth");
+            if(!$response->ok()){
+                throw new \Exception("could not reach envoy at {$this->host}");
+            }
+            return $response->body();
         });
         $backboneString = get_string_between($home, "window.BackboneConfig = {\n", "}\n");
         $backboneString = preg_replace('/\s+/', '', $backboneString);
