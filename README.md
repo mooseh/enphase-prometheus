@@ -44,6 +44,7 @@ services:
       - ENPHASE_EMAIL={enlighted_email}
       - ENPHASE_PASSWORD={enlighted_email}
       - ENPHASE_SITE={enlighten_site_name} #must be exact
+      - ENPHASE_TIMEOUT=20 # optional seconds to timeout
     # or with an env file
     #env_file:
     #  - .enphase.env

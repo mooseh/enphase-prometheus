@@ -17,10 +17,12 @@ class Enphase {
     protected $config;
     protected $host;
     protected $backbone;
+    protected $timeout;
 
     public function __construct($config)
     {
         $this->config = $config;
+        $this->timeout = $this->config['timeout'];
         $this->host = $config['host'];
         $this->backbone = $this->getBackbone();
         $this->token = $this->getToken();
@@ -38,7 +40,7 @@ class Enphase {
      * The primary get method
      */
 
-     protected function get($path, $params = [], $cookies = [], $headers = [], $timeout=15){
+     protected function get($path, $params = [], $cookies = [], $headers = [], $timeout = 20){
         $path = ltrim($path, "/");
         $url = "{$this->getProtocol()}://{$this->host}/{$path}";
 
@@ -145,6 +147,10 @@ class Enphase {
 
     }
 
+    /**
+     * Get the session from the envoy
+     */
+
     public function getSession($refresh=false)
     {
 
@@ -156,7 +162,7 @@ class Enphase {
 
         //1 hour cache
         $response = Cache::remember("enphase_session_{$this->host}", 60 * 60, function(){
-            return Http::timeout(10)
+            return Http::timeout($this->timeout)
             ->withHeaders([
                 "Authorization" => "Bearer {$this->token}"
             ])
@@ -172,11 +178,17 @@ class Enphase {
 
     }
 
+    /**
+     * Get the backbone config from the envoy
+     *
+     * @return array
+     */
+
     public function getBackbone(){
         Cache::forget("envoy_home_{$this->host}");
 
         $home = Cache::remember("envoy_home_{$this->host}", now()->addMinutes(10), function(){
-            $response = Http::withOptions(['verify' => false])->get("{$this->getProtocol()}://{$this->host}/home#auth");
+            $response = Http::timeout($this->timeout)->withOptions(['verify' => false])->get("{$this->getProtocol()}://{$this->host}/home#auth");
             if(!$response->ok()){
                 throw new \Exception("could not reach envoy at {$this->host}");
             }
@@ -190,6 +202,8 @@ class Enphase {
 
     /**
      * A Method to get an asset straight from the envoy
+     *
+     * @return \Illuminate\Http\Response
      */
 
     function getAsset($path)
@@ -209,11 +223,13 @@ class Enphase {
 
     /**
      * A Method to get the production from the envoy
+     *
+     * @return array
      */
 
     public function production()
     {
-        $res =  $this->get('/production.json', ["details" => 1], timeout: 20, cookies: ['SESSION' => $this->token])->json();
+        $res =  $this->get('/production.json', ["details" => 1], timeout: $this->timeout, cookies: ['SESSION' => $this->token])->json();
         $res['production'] = collect($res['production'])->mapWithKeys(function($type, $key){
             return ["{$type['type']}_{$key}" => $type];
         })->toArray();
@@ -228,6 +244,8 @@ class Enphase {
 
     /**
      * A Method to get the network info
+     *
+     * @return array
      */
 
     public function network()
@@ -238,20 +256,24 @@ class Enphase {
 
     /**
      * A Method to get the inverter statuses (installer login only)
+     *
+     * @return array
      */
 
     public function invertersStatus()
     {
-        return $this->get('/installer/agf/inverters_status.json', timeout: 20)->json();
+        return $this->get('/installer/agf/inverters_status.json', timeout: $this->timeout)->json();
     }
 
     /**
      * A Method to get the inverters (installer login only)
+     *
+     * @return array
      */
 
      public function inverters()
      {
-         return $this->get('/api/v1/production/inverters', timeout: 20)->json();
+         return $this->get('/api/v1/production/inverters', timeout: $this->timeout)->json();
      }
 
 }

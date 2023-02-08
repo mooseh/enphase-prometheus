@@ -37,6 +37,7 @@ return [
         "email" => env('ENPHASE_EMAIL'),
         "password" => env('ENPHASE_PASSWORD'),
         "site" => env('ENPHASE_SITE'),
+        "timeout" => env('ENPHASE_TIMEOUT', 15)
     ]
 
 ];
